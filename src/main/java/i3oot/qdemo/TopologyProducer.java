@@ -1,5 +1,7 @@
 package i3oot.qdemo;
 
+import java.time.Duration;
+
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.Produces;
 import javax.inject.Inject;
@@ -13,6 +15,7 @@ import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Named;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.TimeWindows;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.Stores;
 
@@ -32,15 +35,14 @@ public class TopologyProducer {
 
 
     @Produces
-    public Topology topology() {
-
-       // KeyValueBytesStoreSupplier inMemoryStoreSupplier = Stores.inMemoryKeyValueStore("article-by-id");
-        
+    public Topology windowedMsgCountPerUser() {
         StreamsBuilder builder = new StreamsBuilder();
-        builder.stream(conf.inputTopic(), Consumed.with(voidSerde, chatMessageSerde))
+        var windowedMsgCountPerUser = builder.stream(conf.inputTopic(), Consumed.with(voidSerde, chatMessageSerde))
             .peek((k,v) -> TopologyProducer.log.info(v.toString()))
-            .to(conf.outputTopic(), Produced.with(voidSerde, chatMessageSerde));
-      
+            .<String>groupBy((k,v) -> v.getUserId())
+            .windowedBy(TimeWindows.of(Duration.ofSeconds(2)))
+            .count();
+        windowedMsgCountPerUser.toStream().to("windowedMsgCountPerUser");
         return builder.build();
     }
 
