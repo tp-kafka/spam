@@ -1,4 +1,4 @@
-package i3oot.qdemo;
+package tp.kafka.spam;
 
 import java.time.Duration;
 
@@ -26,24 +26,21 @@ import lombok.extern.java.Log;
 @Log
 public class TopologyProducer {
 
-    private final JsonbSerde<ChatMessage> chatMessageSerde = new JsonbSerde<>(ChatMessage.class);
-    private final JsonbSerde<Void> voidSerde = new JsonbSerde<>(Void.class);
-
-    
     @Inject
     Configuration conf;
 
 
     @Produces
-    public Topology windowedMsgCountPerUser() {
+    public Topology filteredInputTopology() {
         StreamsBuilder builder = new StreamsBuilder();
-        var windowedMsgCountPerUser = builder.stream(conf.inputTopic(), Consumed.with(voidSerde, chatMessageSerde))
-            .peek((k,v) -> TopologyProducer.log.info(v.toString()))
-            .<String>groupBy((k,v) -> v.getUserId())
-            .windowedBy(TimeWindows.of(Duration.ofSeconds(2)))
-            .count();
-        windowedMsgCountPerUser.toStream().to("windowedMsgCountPerUser");
+        builder.<Void, ChatMessage>stream(conf.inputTopic())
+            .filterNot(this::containsBadWords)
+            .to(conf.outputTopic());
         return builder.build();
+    }
+
+    Boolean containsBadWords(Void key, ChatMessage msg){
+        return msg.getMessage().toLowerCase().contains("Fight Club");
     }
 
 }

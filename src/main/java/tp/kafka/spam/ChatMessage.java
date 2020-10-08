@@ -1,4 +1,4 @@
-package i3oot.qdemo;
+package tp.kafka.spam;
 
 import lombok.Data;
 
