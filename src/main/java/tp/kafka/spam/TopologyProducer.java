@@ -36,9 +36,9 @@ public class TopologyProducer {
     @Produces
     public Topology filteredInputTopology() {
         StreamsBuilder builder = new StreamsBuilder();
-        builder.<Void, ChatMessage>stream(conf.inputTopic(), Consumed.with(voidSerde, msgSerde))
-            .filterNot(this::containsBadWords)
-            .to(conf.outputTopic());
+        //TODO: create stream from input topic configured in conf with provided serdes
+        //TODO: filter by calling this::containsBadWords
+        //TODO: write resulting stream to output topic configured in conf
         return builder.build();
     }
 
