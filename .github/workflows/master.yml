@@ -15,7 +15,7 @@ jobs:
       with:
         java-version: 11
     - name: Build native with Maven
-      run: mvn -B package -DskipTests -Dquarkus.native.container-build=false -Dquarkus.container-image.build=true
+      run: mvn -B package -DKAFKA_API_KEY=${KAFKA_API_KEY}  -DKAFKA_API_SECRET=${KAFKA_API_SECRET} -DKAFKA_SERVER=${KAFKA_SERVER} -DskipTests -Dquarkus.native.container-build=false -Dquarkus.container-image.build=true
     - name: Upload target for next job
       uses: actions/upload-artifact@v1
       with:
