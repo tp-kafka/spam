@@ -15,7 +15,7 @@ jobs:
       with:
         java-version: 11
     - name: Build native with Maven
-      run: mvn -B package -DKAFKA_API_KEY=${KAFKA_API_KEY}  -DKAFKA_API_SECRET=${KAFKA_API_SECRET} -DKAFKA_SERVER=${KAFKA_SERVER} -DskipTests -Dquarkus.native.container-build=false -Dquarkus.container-image.build=true
+      run: mvn -B package -DKAFKA_API_KEY=${{secrets.KAFKA_API_KEY}}  -DKAFKA_API_SECRET=${{secrets.KAFKA_API_SECRET}} -DKAFKA_SERVER=${{secrets.KAFKA_SERVER}} -DskipTests -Dquarkus.native.container-build=false -Dquarkus.container-image.build=true
     - name: Upload target for next job
       uses: actions/upload-artifact@v1
       with:
@@ -32,6 +32,12 @@ jobs:
       uses: actions/download-artifact@v1
       with:
         name: target
+    
+    - uses: akhileshns/heroku-deploy@master # This is the action
+          with:
+            heroku_api_key: ${{secrets.HEROKU_API_KEY}}
+            heroku_app_name: "tpkafka-spam-processor"
+            heroku_email: "tobias.waller@googlemail.com"              
     - name: Login into Heroku
       uses: actions/heroku@master
       with:
