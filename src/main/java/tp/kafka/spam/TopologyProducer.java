@@ -1,5 +1,6 @@
 package tp.kafka.spam;
 
+import java.nio.channels.SelectionKey;
 import java.time.Duration;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -36,13 +37,26 @@ public class TopologyProducer {
     @Produces
     public Topology filteredInputTopology() {
         StreamsBuilder builder = new StreamsBuilder();
-        builder.<Void, ChatMessage>stream(conf.inputTopic(), Consumed.with(voidSerde, msgSerde))
+        var grouped = builder.<Void, ChatMessage>stream(conf.inputTopic(), Consumed.with(voidSerde, msgSerde))
+            .<String>groupBy((k, v) -> v.getUserId())
+            .windowedBy(TimeWindows.of(Duration.ofSeconds(2)))
+            .count()
+            .toStream()
+            .filter((w,c) -> (c > conf.spamThreshold()))
+            .map((w,c) -> new KeyValue<>(w.key(), c))
+            .peek((k,v) -> TopologyProducer.log(k + "blocked for sending " + v + " messages within 2 seconds"))
+            ;
+                
+
+          builder.<Void, ChatMessage>stream(conf.inputTopic(), Consumed.with(voidSerde, msgSerde))
             .filterNot(this::containsBadWords)
+            .selectKey((k, v) -> v.getUserId())
+            .join(blocked, (msg, k) -> msg, TimeWindows.of(Duration.ofSeconds(conf.banTime())))
             .to(conf.outputTopic());
         return builder.build();
     }
 
-    Boolean containsBadWords(Void key, ChatMessage msg){
+    Boolean containsBadWords(String key, ChatMessage msg){
         boolean result = msg.getMessage().toLowerCase().contains("fight club");
         TopologyProducer.log.info(msg + " does " + (result?"":"not ") +  "contain bad words.");
         return result;
